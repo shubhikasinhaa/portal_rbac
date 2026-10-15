@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tokens, Lambda and Deployment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg:#f6f7f9; --surface:#fff; --sunk:#eef1f4; --fg:#171c22; --muted:#59646f;
+    --line:#dde2e8; --accent:#a85a0d; --ok:#2f6b45; --warn:#8a6118; --stop:#9b2c2c;
+    --display:'Archivo','Helvetica Neue',Arial,sans-serif;
+    --body:'Source Serif 4',Georgia,serif;
+    --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    --col:42rem; --wide:62rem;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme='light']){
+    --bg:#11151a; --surface:#1a2027; --sunk:#151b21; --fg:#e6eaef; --muted:#9aa6b2;
+    --line:#2a323b; --accent:#e0943a; --ok:#6bb187; --warn:#d4ac5a; --stop:#d98080;
+    color-scheme:dark; } }
+  :root[data-theme='dark']{
+    --bg:#11151a; --surface:#1a2027; --sunk:#151b21; --fg:#e6eaef; --muted:#9aa6b2;
+    --line:#2a323b; --accent:#e0943a; --ok:#6bb187; --warn:#d4ac5a; --stop:#d98080;
+    color-scheme:dark; }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:1.0625rem;
+       line-height:1.6;margin:0;padding-inline:1rem;-webkit-font-smoothing:antialiased}
+  .page{max-width:var(--wide);margin-inline:auto;padding-block:3rem 4.5rem}
+  .col{max-width:var(--col);margin-inline:auto}
+  h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+  h1{font-size:clamp(1.9rem,5.5vw,2.5rem);font-weight:700;letter-spacing:-.02em;line-height:1.12}
+  h2{font-size:clamp(1.25rem,3.2vw,1.5rem);font-weight:600;letter-spacing:-.01em}
+  h3{font-size:1rem;font-weight:600}
+  p{margin:0}
+  .eyebrow{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0}
+  .lede{font-size:1.12rem;color:var(--muted);line-height:1.5}
+  header.hero{display:flex;flex-direction:column;gap:.8rem;padding-bottom:1.8rem;border-bottom:1px solid var(--line)}
+  .meta{font-family:var(--mono);font-size:.72rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:.3rem 1.1rem}
+  section{display:flex;flex-direction:column;gap:1rem;padding-block:2.2rem;border-bottom:1px solid var(--line)}
+  section:last-of-type{border-bottom:0}
+  .shead{display:flex;flex-direction:column;gap:.3rem}
+  figure{margin:0;display:flex;flex-direction:column;gap:.6rem}
+  .figwrap{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1rem;overflow-x:auto}
+  figcaption{font-size:.92rem;color:var(--muted);max-width:var(--col);margin-inline:auto}
+  svg{max-width:100%;height:auto;display:block;margin-inline:auto}
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+  table{width:100%;border-collapse:collapse;font-size:.95rem}
+  th,td{text-align:left;padding:.6rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{font-family:var(--display);font-size:.75rem;font-weight:600;letter-spacing:.04em;
+           text-transform:uppercase;color:var(--muted)}
+  tbody tr:last-child td{border-bottom:0}
+  tr.grp td{background:var(--sunk);font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;
+            text-transform:uppercase;color:var(--accent)}
+  .note{background:var(--sunk);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;
+        padding:.9rem 1.1rem;display:flex;flex-direction:column;gap:.4rem}
+  .note.stop{border-left-color:var(--stop)}
+  .note.ok{border-left-color:var(--ok)}
+  .note p{font-size:.98rem}
+  .note .label{font-family:var(--mono);font-size:.67rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+  .note.stop .label{color:var(--stop)}
+  .note.ok .label{color:var(--ok)}
+  .pill{font-family:var(--mono);font-size:.68rem;padding:.14rem .46rem;border-radius:999px;
+        white-space:nowrap;display:inline-block;border:1px solid currentColor}
+  .pill--ok{color:var(--ok)} .pill--warn{color:var(--warn)} .pill--stop{color:var(--stop)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.9rem}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:1rem;
+        display:flex;flex-direction:column;gap:.4rem;min-width:0}
+  .card h3{color:var(--accent)}
+  .card p{font-size:.93rem;color:var(--muted)}
+  ul{margin:0;padding-left:1.15rem;display:flex;flex-direction:column;gap:.4rem}
+  li::marker{color:var(--accent)}
+  code{font-family:var(--mono);font-size:.88em;background:var(--sunk);padding:.1em .35em;border-radius:.2rem}
+  pre{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:.9rem 1rem;
+      overflow-x:auto;margin:0;font-family:var(--mono);font-size:.82rem;line-height:1.55}
+  pre code{background:none;padding:0}
+  footer{padding-top:2rem;font-size:.88rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero col">
+    <p class="eyebrow">Compass Group India &#183; RBAC</p>
+    <h1>Tokens, Lambda and Deployment</h1>
+    <p class="lede">How an application proves who it is, where RBAC runs, and how code gets from GitHub to AWS without storing a password anywhere.</p>
+    <p class="meta"><span>15 October 2026</span><span>Written to be read start to finish</span></p>
+  </header>
+
+  <!-- ─────────────────────────── PART 1: TOKENS ─────────────────────────── -->
+
+  <section class="col">
+    <div class="shead"><p class="eyebrow">Part 1 &#183; Start here</p><h2>What a token actually is</h2></div>
+    <p>A token is a <strong>temporary pass</strong>. Like a visitor badge at reception: you show your ID once, you get a badge, and the badge gets you through doors for a few hours. Nobody re-checks your ID at every door &#8212; they just look at the badge.</p>
+    <div class="cards">
+      <div class="card">
+        <h3>It expires</h3>
+        <p>A stolen badge is useless tomorrow. That is the main reason tokens exist instead of passwords.</p>
+      </div>
+      <div class="card">
+        <h3>It is signed</h3>
+        <p>It carries a mathematical seal. Anyone can check the seal is real; nobody can fake one.</p>
+      </div>
+      <div class="card">
+        <h3>It says who you are</h3>
+        <p>Which application, which person, what it may do, and when it stops working.</p>
+      </div>
+    </div>
+    <div class="note">
+      <span class="label">The one sentence</span>
+      <p>The password is used <strong>once</strong>, to get a token. After that, only the token travels. If a token leaks, it dies on its own in twenty minutes. If a password leaks, it works until somebody notices.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="col shead"><p class="eyebrow">Part 1 &#183; The design</p><h2>The two-endpoint pattern</h2></div>
+    <div class="col"><p>One endpoint hands out a token. The other accepts it. This is the pattern you were asked to use, and it is the standard way almost every API on the internet works.</p></div>
+    <figure>
+      <div class="figwrap">
+        <svg style="min-width:720px" viewBox="0 0 880 430" role="img" aria-label="The two endpoint pattern. The application posts its client id and client secret to the token endpoint. RBAC replies with an access token that expires in twenty minutes. The application keeps that token in its own server memory. It then calls the permissions endpoint with the token in the Authorization header, and gets back permissions, menu and version. After about sixteen minutes, or whenever a call is refused, it goes back to the first step and gets a new token.">
+          <defs>
+            <marker id="t1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+            <marker id="t2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#a85a0d"/></marker>
+          </defs>
+          <g font-family="IBM Plex Mono, monospace" font-size="11.5" fill="currentColor" text-anchor="middle">
+            <text x="220" y="24">Your application</text><text x="660" y="24">RBAC</text>
+          </g>
+          <g stroke="currentColor" stroke-width="1" opacity="0.24">
+            <line x1="220" y1="34" x2="220" y2="400"/><line x1="660" y1="34" x2="660" y2="400"/>
+          </g>
+          <g font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle">
+
+            <circle cx="40" cy="74" r="10" fill="none" stroke="#a85a0d" stroke-width="1.1"/>
+            <text x="40" y="78" fill="#a85a0d">1</text>
+            <line x1="227" y1="78" x2="652" y2="78" stroke="#a85a0d" stroke-width="2" marker-end="url(#t2)"/>
+            <text x="440" y="70" fill="#a85a0d" font-size="10.5">POST /v1/auth/token</text>
+            <text x="440" y="94" opacity="0.65" font-size="9.5">client_id + client_secret</text>
+
+            <circle cx="40" cy="126" r="10" fill="none" stroke="#a85a0d" stroke-width="1.1"/>
+            <text x="40" y="130" fill="#a85a0d">2</text>
+            <line x1="660" y1="130" x2="235" y2="130" stroke="#a85a0d" stroke-width="2" marker-end="url(#t2)"/>
+            <text x="447" y="122" fill="#a85a0d" font-size="10.5">access_token &#183; expires_in: 1200</text>
+
+            <rect x="92" y="150" width="256" height="34" rx="7" fill="var(--surface)" stroke="currentColor" stroke-width="1.2" stroke-dasharray="5 4"/>
+            <text x="220" y="164" font-size="9.5">held in the app&#8217;s own server memory</text>
+            <text x="220" y="177" font-size="9.5" fill="#9b2c2c">never in a browser</text>
+
+            <circle cx="40" cy="222" r="10" fill="none" stroke="#a85a0d" stroke-width="1.1"/>
+            <text x="40" y="226" fill="#a85a0d">3</text>
+            <line x1="227" y1="226" x2="652" y2="226" stroke="#a85a0d" stroke-width="2" marker-end="url(#t2)"/>
+            <text x="440" y="218" fill="#a85a0d" font-size="10.5">GET /v1/me/permissions?app=foodbook</text>
+            <text x="440" y="242" opacity="0.65" font-size="9.5">Authorization: Bearer &lt;token&gt;</text>
+
+            <rect x="536" y="256" width="248" height="34" rx="7" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+            <text x="660" y="270" font-size="9.5">check the seal &#183; check it has not expired</text>
+            <text x="660" y="283" font-size="9.5">check it is asking about its own app</text>
+
+            <circle cx="40" cy="316" r="10" fill="none" stroke="#a85a0d" stroke-width="1.1"/>
+            <text x="40" y="320" fill="#a85a0d">4</text>
+            <line x1="660" y1="320" x2="235" y2="320" stroke="#a85a0d" stroke-width="2" marker-end="url(#t2)"/>
+            <text x="447" y="312" fill="#a85a0d" font-size="10.5">permissions &#183; menu &#183; version</text>
+
+            <circle cx="40" cy="376" r="10" fill="none" stroke="#a85a0d" stroke-width="1.1"/>
+            <text x="40" y="380" fill="#a85a0d">5</text>
+            <path d="M 220 344 L 120 344 L 120 380 L 212 380" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#t1)"/>
+            <text x="470" y="372" font-size="10">after ~16 minutes, or if a call comes back 401</text>
+            <text x="470" y="386" font-size="10" opacity="0.65">&#8212; go back to step 1 and get a fresh token</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>Steps 1 and 2 happen roughly three times an hour. Steps 3 and 4 happen once per person per sign-in. Everything else is answered from the application&#8217;s own memory.</figcaption>
+    </figure>
+  </section>
+
+  <section class="col">
+    <div class="shead"><p class="eyebrow">Part 1 &#183; The detail</p><h2>Why twenty minutes</h2></div>
+    <p>Short expiry limits the damage window. If a token leaks, the attacker has twenty minutes, not a year. But too short and you spend all day fetching tokens.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Expiry</th><th>What it means</th></tr></thead>
+        <tbody>
+          <tr><td>5 minutes</td><td>Very safe, but 12 token calls an hour per application. Wasteful.</td></tr>
+          <tr><td><strong>20 minutes</strong> <span class="pill pill--ok">chosen</span></td><td>3 token calls an hour. A leaked token is dead before anyone could use it meaningfully.</td></tr>
+          <tr><td>1 hour</td><td>What Microsoft Entra issues by default. Fine, but a longer damage window.</td></tr>
+          <tr><td>No expiry</td><td>Not a token. That is a password with extra steps.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <span class="label">Refresh properly, not on a blind timer</span>
+      <p>Do not set a loop that fires every twenty minutes and hopes. Refresh at about <strong>16 minutes</strong> &#8212; 80% of the life &#8212; <em>or</em> immediately when a call comes back <code>401</code>. That way a clock drift, a restart or an early expiry never causes a failed request.</p>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="shead"><p class="eyebrow">Part 1 &#183; Important</p><h2>Where the token is kept</h2></div>
+    <div class="note stop">
+      <span class="label">This one matters</span>
+      <p>This token belongs to the <strong>application&#8217;s back end</strong>, not to a browser. It must be stored in the server&#8217;s own memory. If it is put in browser <code>localStorage</code>, any cross-site scripting bug on any page steals it, and whoever steals it can read every permission in that application until it expires.</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Place</th><th>Safe?</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>The back end&#8217;s memory</td><td><span class="pill pill--ok">Yes</span></td><td>Never leaves the server. Dies on restart, which is fine &#8212; it just fetches another.</td></tr>
+          <tr><td>A server-side cache (Redis)</td><td><span class="pill pill--ok">Yes</span></td><td>Needed only if many servers share one token. Still server-side.</td></tr>
+          <tr><td>Browser <code>localStorage</code></td><td><span class="pill pill--stop">No</span></td><td>Readable by any script on the page. This is the classic token-theft route.</td></tr>
+          <tr><td>In the code, or in Git</td><td><span class="pill pill--stop">No</span></td><td>That is the <em>secret</em>, not the token, and it belongs in a secret store.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The browser never needs this token. The person signs into <em>your</em> application in whatever way it already works; your back end then asks RBAC on their behalf.</p>
+  </section>
+
+  <section>
+    <div class="col shead"><p class="eyebrow">Part 1 &#183; The trade-off</p><h2>What changes, and what it costs</h2></div>
+    <div class="col"><p>Today Microsoft issues the token. In the new design RBAC issues it. That genuinely makes onboarding much easier &#8212; and it does have a price worth knowing before you present it.</p></div>
+    <figure>
+      <div class="figwrap">
+        <svg style="min-width:760px" viewBox="0 0 880 300" role="img" aria-label="A comparison. Today, the application asks Microsoft Entra for a token and RBAC verifies it using Microsoft's public key, so RBAC stores no secrets and holds no signing key. In the proposed design, the application asks RBAC itself for a token, so RBAC must store every application's secret and must hold a private signing key of its own.">
+          <defs>
+            <marker id="c1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+          </defs>
+          <g font-family="IBM Plex Mono, monospace" font-size="10" text-anchor="middle">
+
+            <text x="215" y="22" font-size="11" fill="#2f6b45" letter-spacing="1.2">TODAY</text>
+            <rect x="20" y="36" width="390" height="244" rx="9" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 4" opacity="0.4"/>
+            <rect x="46" y="60" width="120" height="44" rx="7" fill="var(--sunk)" stroke="currentColor" stroke-width="1"/>
+            <text x="106" y="80">Your app</text><text x="106" y="94" opacity="0.6" font-size="9">id + secret</text>
+            <rect x="266" y="60" width="120" height="44" rx="7" fill="var(--sunk)" stroke="currentColor" stroke-width="1"/>
+            <text x="326" y="80">Microsoft</text><text x="326" y="94" opacity="0.6" font-size="9">Entra ID</text>
+            <line x1="172" y1="82" x2="260" y2="82" stroke="currentColor" stroke-width="1.4" marker-end="url(#c1)"/>
+            <rect x="156" y="140" width="120" height="44" rx="7" fill="var(--sunk)" stroke="currentColor" stroke-width="1"/>
+            <text x="216" y="160">RBAC</text><text x="216" y="174" opacity="0.6" font-size="9">verifies only</text>
+            <path d="M 326 108 L 326 162 L 284 162" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#c1)"/>
+            <text x="366" y="136" font-size="9" opacity="0.7">public key</text>
+            <rect x="46" y="208" width="340" height="52" rx="7" fill="none" stroke="#2f6b45" stroke-width="1.2"/>
+            <text x="216" y="228" fill="#2f6b45">RBAC stores no application secrets</text>
+            <text x="216" y="245" fill="#2f6b45">and holds no signing key of its own</text>
+
+            <text x="665" y="22" font-size="11" fill="#a85a0d" letter-spacing="1.2">PROPOSED</text>
+            <rect x="470" y="36" width="390" height="244" rx="9" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 4" opacity="0.4"/>
+            <rect x="496" y="60" width="120" height="44" rx="7" fill="var(--sunk)" stroke="currentColor" stroke-width="1"/>
+            <text x="556" y="80">Your app</text><text x="556" y="94" opacity="0.6" font-size="9">id + secret</text>
+            <rect x="716" y="60" width="120" height="44" rx="7" fill="var(--sunk)" stroke="#a85a0d" stroke-width="1.4"/>
+            <text x="776" y="80" fill="#a85a0d">RBAC</text><text x="776" y="94" opacity="0.6" font-size="9">issues + verifies</text>
+            <line x1="622" y1="82" x2="710" y2="82" stroke="#a85a0d" stroke-width="1.6" marker-end="url(#c1)"/>
+            <path d="M 776 108 L 776 150" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>
+            <rect x="656" y="150" width="240" height="34" rx="7" fill="var(--sunk)" stroke="currentColor" stroke-width="1"/>
+            <text x="776" y="164" font-size="9">Microsoft no longer involved</text>
+            <text x="776" y="177" font-size="9" opacity="0.6">in this step</text>
+            <rect x="496" y="208" width="340" height="52" rx="7" fill="none" stroke="#9b2c2c" stroke-width="1.2"/>
+            <text x="666" y="228" fill="#9b2c2c">RBAC must now store every app&#8217;s secret</text>
+            <text x="666" y="245" fill="#9b2c2c">and hold a private signing key</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>Both designs work. The difference is not speed &#8212; it is <strong>who holds the keys</strong>.</figcaption>
+    </figure>
+    <div class="col">
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th></th><th>Microsoft issues it (today)</th><th>RBAC issues it (proposed)</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Onboarding a new app</strong></td><td><span class="pill pill--warn">Slow</span> needs an Entra registration from IT</td><td><span class="pill pill--ok">Minutes</span> an admin creates it in the console</td></tr>
+            <tr><td><strong>Who stores app secrets</strong></td><td><span class="pill pill--ok">Nobody</span> RBAC has no column for one</td><td><span class="pill pill--warn">RBAC</span> hashed, but it is now a target</td></tr>
+            <tr><td><strong>Signing key</strong></td><td><span class="pill pill--ok">Microsoft&#8217;s</span> we only hold the public half</td><td><span class="pill pill--warn">Ours</span> a private key we must protect</td></tr>
+            <tr><td><strong>If RBAC is breached</strong></td><td>Attacker reads data, cannot forge tokens</td><td>Attacker could forge tokens for any application</td></tr>
+            <tr><td><strong>Revoking one app</strong></td><td>Disable it in Entra</td><td><span class="pill pill--ok">Easier</span> delete the secret in RBAC</td></tr>
+            <tr><td><strong>If Microsoft is down</strong></td><td>No new tokens issued</td><td><span class="pill pill--ok">Unaffected</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="col note">
+      <span class="label">One correction worth making out loud</span>
+      <p>Verifying a Microsoft token is <strong>not slow</strong>. It is a signature check against a key already held in memory &#8212; no call to Azure, no network hop, microseconds. Microsoft&#8217;s keys are fetched once and cached for 24 hours. So the reason to change is <em>not</em> speed. The real reason is <strong>onboarding friction</strong>: every new application currently needs its own Entra registration, and with many applications that is the slow part. That is a good reason on its own.</p>
+    </div>
+    <div class="col note">
+      <span class="label">And one thing that cannot change</span>
+      <p>Microsoft stays regardless. Administrators still sign into the RBAC console with their Compass account, and the employee list still comes from the directory. Only the <strong>application-to-RBAC</strong> step moves. This is not a removal of Azure &#8212; it is a shortcut for one specific hop.</p>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="shead"><p class="eyebrow">Part 1 &#183; Doing it safely</p><h2>If we build it, these are not optional</h2></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Store the secret <strong>hashed</strong>, never in plain text</td><td>Same as a password. If the database leaks, the secrets are still useless.</td></tr>
+          <tr><td>Show the secret <strong>once</strong>, at creation</td><td>If it can be read back later, the console becomes the thing to attack.</td></tr>
+          <tr><td>Signing key in <strong>AWS Secrets Manager</strong>, never in code</td><td>It is the master key. Anyone holding it can mint any token.</td></tr>
+          <tr><td>Two secrets allowed per application</td><td>So a secret can be rotated without downtime: add new, switch, remove old.</td></tr>
+          <tr><td>Rate limit the token endpoint hard</td><td>It is the one endpoint where guessing a secret is possible. Slow guessing down.</td></tr>
+          <tr><td>Log every token issued and every failure</td><td>A burst of failures is the first sign somebody is trying secrets.</td></tr>
+          <tr><td>The token names <strong>one</strong> application</td><td>A token for FoodBook can never ask about Saarthi. Same wall as today.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── PART 2: LAMBDA ─────────────────────────── -->
+
+  <section class="col">
+    <div class="shead"><p class="eyebrow">Part 2 &#183; Hosting</p><h2>What AWS Lambda is</h2></div>
+    <p>Normally you rent a server: it runs all day, you pay all day, and you patch it. <strong>Lambda is the opposite.</strong> You hand AWS your code. It sits idle costing nothing. When a request arrives, AWS starts it, runs it, and stops it.</p>
+    <div class="cards">
+      <div class="card"><h3>You pay per call</h3><p>No request, no bill. Our free allowance is a million calls a month; we expect about 45,000.</p></div>
+      <div class="card"><h3>Nothing to patch</h3><p>No operating system of ours to update. AWS handles the machine entirely.</p></div>
+      <div class="card"><h3>It scales itself</h3><p>Ten calls or ten thousand, AWS runs as many copies as needed. No configuration.</p></div>
+    </div>
+    <div class="note">
+      <span class="label">The one quirk</span>
+      <p>If nothing has called it for a while, the first call waits a second or two while AWS starts it up. This is called a <strong>cold start</strong>. For RBAC it does not matter &#8212; the client library asks once per sign-in and then goes quiet.</p>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="shead"><p class="eyebrow">Part 2 &#183; The question asked</p><h2>HTTP API or REST API?</h2></div>
+    <p>These are the two kinds of front door AWS offers in front of a Lambda. The names are confusing &#8212; <em>both</em> speak ordinary HTTP and both are RESTful. The real difference is that <strong>HTTP API is the cheap, stripped-down one</strong> and <strong>REST API is the full-featured one</strong>.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Feature</th><th>REST API</th><th>HTTP API</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="3">Things we said we need</td></tr>
+          <tr><td><strong>AWS WAF</strong> &#8212; the firewall that blocks attacks</td><td><span class="pill pill--ok">Yes</span></td><td><span class="pill pill--stop">No</span></td></tr>
+          <tr><td><strong>Private endpoint</strong> &#8212; not reachable from the internet at all</td><td><span class="pill pill--ok">Yes</span></td><td><span class="pill pill--stop">No</span></td></tr>
+          <tr><td>Per-client rate limiting</td><td><span class="pill pill--ok">Yes</span></td><td><span class="pill pill--stop">No</span></td></tr>
+          <tr><td>Request validation &#8212; reject bad input before Lambda runs</td><td><span class="pill pill--ok">Yes</span></td><td><span class="pill pill--stop">No</span></td></tr>
+          <tr class="grp"><td colspan="3">Where HTTP API wins</td></tr>
+          <tr><td>Price per million calls (Mumbai)</td><td>$3.50</td><td><span class="pill pill--ok">$1.05</span></td></tr>
+          <tr><td>Built-in JWT checking</td><td><span class="pill pill--stop">No</span></td><td><span class="pill pill--ok">Yes</span></td></tr>
+          <tr><td>Slightly lower latency</td><td>&#8212;</td><td><span class="pill pill--ok">Yes</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note ok">
+      <span class="label">Answer: REST API</span>
+      <p>The firewall and the private endpoint are both <strong>REST-only</strong>, and we want both. The usual argument for HTTP API is price &#8212; but at 45,000 calls a month that is <strong>$0.16 versus $0.05</strong>. We would be giving up our two most important network protections to save <strong>eleven paise a month</strong>.</p>
+    </div>
+    <div class="note stop">
+      <span class="label">A correction to the earlier document</span>
+      <p>An earlier note said &#8220;API Gateway HTTP API with a WAF&#8221;. That combination does not exist &#8212; AWS does not allow a WAF on an HTTP API. If REST API is chosen, the $0.10 difference should be corrected in the cost sheet; nothing else changes.</p>
+    </div>
+  </section>
+
+  <!-- ──────────────────────── PART 3: DEPLOYMENT ────────────────────────── -->
+
+  <section>
+    <div class="col shead"><p class="eyebrow">Part 3 &#183; Deployment</p><h2>Getting code from GitHub to AWS</h2></div>
+    <div class="col"><p>When GitHub builds our code and deploys it, AWS has to be convinced GitHub is allowed to. There are two ways, and one of them is now considered the wrong way.</p></div>
+    <figure>
+      <div class="figwrap">
+        <svg style="min-width:760px" viewBox="0 0 880 330" role="img" aria-label="Two ways to deploy. The old way stores a permanent AWS access key and secret key inside GitHub, which GitHub sends to AWS on every deploy; if that key leaks it works forever until someone notices. The new way, OIDC, has GitHub sign a short statement proving which repository and branch is running; AWS checks that signature against a trust rule and hands back temporary credentials that expire in about an hour, so nothing permanent is stored anywhere.">
+          <defs>
+            <marker id="d1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+            <marker id="d2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#a85a0d"/></marker>
+          </defs>
+          <g font-family="IBM Plex Mono, monospace" font-size="10" text-anchor="middle">
+
+            <text x="215" y="22" font-size="11" fill="#9b2c2c" letter-spacing="1.2">OLD WAY &#8212; ACCESS KEYS</text>
+            <rect x="20" y="36" width="390" height="272" rx="9" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 4" opacity="0.4"/>
+            <rect x="60" y="62" width="130" height="46" rx="7" fill="var(--sunk)" stroke="currentColor" stroke-width="1"/>
+            <text x="125" y="82">GitHub</text><text x="125" y="97" opacity="0.6" font-size="9">Actions</text>
+            <rect x="240" y="62" width="130" height="46" rx="7" fill="var(--sunk)" stroke="currentColor" stroke-width="1"/>
+            <text x="305" y="82">AWS</text>
+            <rect x="46" y="134" width="158" height="44" rx="7" fill="none" stroke="#9b2c2c" stroke-width="1.3"/>
+            <text x="125" y="152" fill="#9b2c2c" font-size="9">AWS_ACCESS_KEY_ID</text>
+            <text x="125" y="167" fill="#9b2c2c" font-size="9">AWS_SECRET_ACCESS_KEY</text>
+            <path d="M 125 126 L 125 134" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+            <line x1="196" y1="86" x2="234" y2="86" stroke="currentColor" stroke-width="1.4" marker-end="url(#d1)"/>
+            <text x="215" y="76" font-size="9">the key</text>
+            <rect x="46" y="204" width="340" height="86" rx="7" fill="none" stroke="#9b2c2c" stroke-width="1.2"/>
+            <text x="216" y="226" fill="#9b2c2c">Stored in GitHub forever</text>
+            <text x="216" y="245" font-size="9" opacity="0.75">Never expires on its own</text>
+            <text x="216" y="261" font-size="9" opacity="0.75">If it leaks, it works until somebody notices</text>
+            <text x="216" y="277" font-size="9" opacity="0.75">Somebody has to remember to rotate it</text>
+
+            <text x="665" y="22" font-size="11" fill="#2f6b45" letter-spacing="1.2">NEW WAY &#8212; OIDC</text>
+            <rect x="470" y="36" width="390" height="272" rx="9" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 4" opacity="0.4"/>
+            <rect x="500" y="62" width="120" height="46" rx="7" fill="var(--sunk)" stroke="currentColor" stroke-width="1"/>
+            <text x="560" y="82">GitHub</text><text x="560" y="97" opacity="0.6" font-size="9">Actions</text>
+            <rect x="710" y="62" width="120" height="46" rx="7" fill="var(--sunk)" stroke="#a85a0d" stroke-width="1.3"/>
+            <text x="770" y="82" fill="#a85a0d">AWS STS</text>
+            <line x1="626" y1="78" x2="704" y2="78" stroke="#a85a0d" stroke-width="1.6" marker-end="url(#d2)"/>
+            <text x="665" y="68" font-size="9" fill="#a85a0d">signed proof</text>
+            <line x1="770" y1="114" x2="770" y2="140" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>
+            <rect x="646" y="140" width="190" height="42" rx="7" fill="var(--sunk)" stroke="currentColor" stroke-width="1"/>
+            <text x="741" y="157" font-size="9">AWS checks the trust rule:</text>
+            <text x="741" y="171" font-size="9">is this our repo, our branch?</text>
+            <path d="M 646 161 L 568 161 L 568 122" fill="none" stroke="#a85a0d" stroke-width="1.5" marker-end="url(#d2)"/>
+            <text x="556" y="140" font-size="9" fill="#a85a0d" text-anchor="end">temp keys</text>
+            <rect x="496" y="204" width="340" height="86" rx="7" fill="none" stroke="#2f6b45" stroke-width="1.2"/>
+            <text x="666" y="226" fill="#2f6b45">Nothing stored anywhere</text>
+            <text x="666" y="245" font-size="9" opacity="0.75">Credentials expire in about an hour</text>
+            <text x="666" y="261" font-size="9" opacity="0.75">Locked to one repository and branch</text>
+            <text x="666" y="277" font-size="9" opacity="0.75">Nothing to leak, nothing to rotate</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>Same idea as the token pattern in Part 1: <b>prove who you are, get something temporary, let it expire.</b> OIDC just applies it to deployment instead of to applications.</figcaption>
+    </figure>
+  </section>
+
+  <section class="col">
+    <div class="shead"><p class="eyebrow">Part 3 &#183; How</p><h2>Setting up OIDC, in four steps</h2></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Step</th><th>What you do</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1</strong></td><td>Add GitHub as a trusted identity provider &#8212; URL <code>token.actions.githubusercontent.com</code>, audience <code>sts.amazonaws.com</code></td><td>AWS, once per account</td></tr>
+          <tr><td><strong>2</strong></td><td>Create a role that says what deployment is allowed to touch, with a trust rule naming <em>our</em> repository and branch</td><td>AWS</td></tr>
+          <tr><td><strong>3</strong></td><td>Give the workflow permission to ask for a proof, and tell it which role to use</td><td>GitHub</td></tr>
+          <tr><td><strong>4</strong></td><td>Delete the old access keys from GitHub secrets</td><td>GitHub</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The whole GitHub side is about six lines:</p>
+<pre><code>permissions:
+  id-token: write          # lets the job ask GitHub for a signed proof
+  contents: read
+
+steps:
+  - uses: aws-actions/configure-aws-credentials@v6
+    with:
+      role-to-assume: arn:aws:iam::&lt;account&gt;:role/rbac-deploy
+      aws-region: ap-south-1</code></pre>
+    <p>And the trust rule on the AWS side is what stops anybody else using it:</p>
+<pre><code>"Condition": {
+  "StringEquals": {
+    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+    "token.actions.githubusercontent.com:sub":
+        "repo:compass-group/rbac-portal:ref:refs/heads/main"
+  }
+}</code></pre>
+    <div class="note">
+      <span class="label">Read that last line carefully</span>
+      <p>It says: only the <code>main</code> branch of <em>that one repository</em> may deploy. A fork cannot. A pull request from outside cannot. Another team&#8217;s repository cannot. Without that line the role would trust <strong>every repository on GitHub</strong> &#8212; which is the one mistake people make when setting this up.</p>
+    </div>
+    <div class="note stop">
+      <span class="label">Recent change &#8212; worth knowing</span>
+      <p>Repositories created after <strong>15 July 2026</strong> use a longer form that includes numeric organisation and repository IDs. If the trust rule uses the old short form, the deploy fails with &#8220;Not authorized to perform sts:AssumeRoleWithWebIdentity&#8221;. Check the exact value in the workflow log before locking it down.</p>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="shead"><p class="eyebrow">Summary</p><h2>Everything in one place</h2></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Question</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr><td>What is a token?</td><td>A temporary signed pass. Password used once; token travels after that.</td></tr>
+          <tr><td>Two endpoints?</td><td>One issues the token, one accepts it. Standard pattern, used by almost every API.</td></tr>
+          <tr><td>Expiry?</td><td>20 minutes. Refresh at ~16 minutes or on a <code>401</code>, not on a blind loop.</td></tr>
+          <tr><td>Where is the token kept?</td><td>The back end&#8217;s memory. <strong>Never browser localStorage.</strong></td></tr>
+          <tr><td>Is Microsoft validation slow?</td><td>No &#8212; it is a local check, microseconds. The real win is easier onboarding.</td></tr>
+          <tr><td>Does Azure go away?</td><td>No. Admin sign-in and the employee list still come from it.</td></tr>
+          <tr><td>What does the change cost?</td><td>RBAC must store app secrets and hold a signing key. Today it holds neither.</td></tr>
+          <tr><td>What is Lambda?</td><td>Code that runs only when called. No server to patch, free at our size.</td></tr>
+          <tr><td>HTTP API or REST API?</td><td><strong>REST.</strong> Firewall and private endpoint are REST-only; the saving is $0.11/month.</td></tr>
+          <tr><td>GitHub deploy?</td><td><strong>OIDC</strong>, not access keys. Nothing stored, credentials expire hourly.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="col">
+    <p>Prices from the AWS Price List API for <code>ap-south-1</code>. Feature comparison from the AWS documentation page &#8220;Choose between REST APIs and HTTP APIs&#8221;. OIDC setup from the <code>aws-actions/configure-aws-credentials</code> documentation, v6.</p>
+  </footer>
+
+</div>
+</body>
+</html>
